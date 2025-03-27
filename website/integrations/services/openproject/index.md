@@ -48,6 +48,9 @@ Insert Service configuration
 
 2. Continue with steps....
 
+OpenID conifg: https://www.openproject.org/docs/system-admin-guide/authentication/openid-providers/#custom-openid-connect-provider
+SAML config: https://www.openproject.org/docs/system-admin-guide/authentication/saml/
+
 ## Configuration verification
 
 Template sentence that you can typically use here: "To confirm that authentik is properly configured with _OpenProject_, log out and log back in via authentik."

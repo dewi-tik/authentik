@@ -23,9 +23,7 @@ This documentation lists only the settings that you need to change from their de
 
 ## authentik configuration
 
-To support the integration of _Calibre-Web_ with authentik, you need to create an application/provider pair in authentik.
-
-_Any specific info about this integration can go here._
+To support the integration of _Calibre-Web_ with authentik, you need to create an application/provider pair and a correspdonding group in authentik.
 
 ### Create an application and provider in authentik
 
@@ -33,25 +31,64 @@ _Any specific info about this integration can go here._
 2. Navigate to **Applications** > **Applications** and click **Create with Provider** to create an application and provider pair. (Alternatively you can create only an application, without a provider, by clicking **Create**.)
 
 - **Application**: provide a descriptive name, an optional group for the type of application, the policy engine mode, and optional UI settings.
-    - _If there are any specific settings required, list them here. Refer to the [ownCloud integration documentation](https://github.com/goauthentik/authentik/blob/main/website/integrations/services/owncloud/index.md) for a complex requirements example._
-- **Choose a Provider type**
-    - _If there is a specific provider type required, state that here._
-- **Configure the Provider**: provide a name (or accept the auto-provided name), the authorization flow to use for this provider, and the following required configurations.
-    - _If there are any specific settings required, list them here. Refer to the [ownCloud integration documentation](https://github.com/goauthentik/authentik/blob/main/website/integrations/services/owncloud/index.md) for a complex requirements example._
+
+- **Choose a Provider type**: select LDAP Provider as the provider type.
+
+- **Configure the Provider**: provide a name (or accept the auto-provided name) and set the authorization flow to use for this provider.
+
 - **Configure Bindings** _(optional)_: you can create a [binding](/docs/add-secure-apps/flows-stages/bindings/) (policy, group, or user) to manage the listing and access to applications on a user's **My applications** page.
 
 3. Click **Submit** to save the new application and provider.
 
+### Create a group in authentik
+
+Create a group that will grant access to Calibre-Web.
+
+1. Navigate to **Directory** > **Groups** and click **Create**.
+
+- **Name**: provide a name (e.g. `Calibre-Web`).
+
+2. Click **Create**.
+
+### Add users to the group
+
+Add the user that require access to the newly created group.
+
+1. Navigate to **Directory** > **Groups** and click on the name of the group (e.g. `Calibre-Web`) that was just created.
+
+2. Navigate to the **Users** tab and click **Add existing user**.
+
+3. Click **+**.
+
+4. Select the user that requires access and click **Add**.
+
+5. Click **Add**.
+
 ## Calibre-Web configuration
 
-Insert Service configuration
+1. Navigate to **Admin** > **Edit Basic Configuration** and click on **Feature Configuration** and set the following options:
 
-1. Write first step here...
+- Login Type: `Use LDAP Authentication`
+- LDAP Server: `<em>authentik.company</em>`
+- LDAP Server Port: `389`
+- LDAP Encryption: `None`
+- LDAP Authentication: `Simple`
+- LDAP Administrator Username: `cn=<em><authentik_administrator_username></em>,ou=users,dc=goauthentik,dc=io` (e.g. `cn=akadmin,ou=users,dc=goauthentik,dc=io`)
+- LDAP Administrator Password: `<em><authentik_administrator_password></em>`
+- LDAP Distinguished Name (DN): `dc=ldap,dc=goauthentik,dc=io`
+- LDAP User Object Filter: `(&(objectclass=user)(cn=%s))`
+- LDAP Server is OpenLDAP?: `true`
+- LDAP Group Object Filter: `(&(objectclass=group)(cn=%s))`
+- LDAP Group Name: `<em><group_name></em>` (e.g. `Calibre-Web`)
+- LDAP Group Members Field: `member`
+- LDAP Member User Filter Detection: `Autodetect`
 
-2. Continue with steps....
+2. Click **Save**.
+
+3. Navigate to **Admin** and click **Import LDAP Users**
+
+4. Once the user is imported from authentik, click **Edit Users** and give the user the desired permissions by checking the relevant checkboxes.
 
 ## Configuration verification
 
-Template sentence that you can typically use here: "To confirm that authentik is properly configured with _Calibre-Web_, log out and log back in via authentik."
-
-If there are more specific validation methods for the Service (e.g., clicking a button), include these instructions for clarity.
+To confirm that authentik is properly configured with _Calibre-Web_, log out and log back in using the credentials of a user that is a member of the LDAP group (e.g. `Calibre-Web`).

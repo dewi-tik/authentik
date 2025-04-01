@@ -132,6 +132,7 @@ module.exports = {
                     items: [
                         "services/actual-budget/index",
                         "services/adventurelog/index",
+                        "services/audiobookshelf/index",
                         "services/engomo/index",
                         "services/frappe/index",
                         "services/freshrss/index",

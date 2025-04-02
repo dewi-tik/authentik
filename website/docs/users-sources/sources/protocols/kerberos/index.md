@@ -1,144 +1,94 @@
 ---
-title: Kerberos
-authentik_preview: true
-authentik_version: "2024.10"
+title: Integrate with Calibre-Web
+sidebar_label: Calibre-Web
+support_level: community
 ---
 
-This source allows users to enroll themselves with an existing Kerberos identity.
+## What is Calibre-Web
+
+> Calibre-Web is a web app that offers an interface for browsing, reading, and downloading eBooks using a valid Calibre database.
+>
+> -- https://github.com/janeczku/calibre-web
 
 ## Preparation
 
 The following placeholders are used in this guide:
 
-- `REALM.COMPANY` is the Kerberos realm.
-- `authentik.company` is the FQDN of the authentik install.
+- `calibreweb.company` is the FQDN of the Calibre-Web installation.
+- `authentik.company` is the FQDN of the authentik installation.
 
-Examples are shown for an MIT Krb5 KDC system; you might need to adapt them for you Kerberos installation.
+:::note
+This documentation lists only the settings that you need to change from their default values. Be aware that any changes other than those explicitly mentioned in this guide could cause issues accessing your application.
+:::
 
-There are three ways to use the Kerberos source:
+## authentik configuration
 
-- As a password backend, where users can log in to authentik with their Kerberos password.
-- As a directory source, where users are synced from the KDC.
-- With SPNEGO, where users can log in to authentik with their [browser](./browser.md) and their Kerberos credentials.
+To support the integration of Calibre-Web with authentik, you need to create an application/provider pair and a correspdonding group in authentik.
 
-You can choose to use one or several of those methods.
+### Create an application and provider in authentik
 
-## Common settings
+1. Log in to authentik as an admin, and open the authentik Admin interface.
+2. Navigate to **Applications** > **Applications** and click **Create with Provider** to create an application and provider pair. (Alternatively you can first create a provider separately, then create the application and connect it with the provider.)
 
-In the authentik Admin interface, under **Directory** -> **Federation and Social login**, create a new source of type Kerberos with these settings:
+- **Application**: provide a descriptive name, an optional group for the type of application, the policy engine mode, and optional UI settings.
 
-- Name: a value of your choosing. This name is shown to users if you use the SPNEGO login method.
-- Slug: `kerberos`
-- Realm: `REALM.COMPANY`
-- Kerberos 5 configuration: If you need to override the default Kerberos configuration, you can do it here. See [man krb5.conf(5)](https://web.mit.edu/kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html) for the expected format.
-- User matching mode: define how Kerberos users get matched to authentik users.
-- Group matching mode: define how Kerberos groups (specified via property mappings) get matched to authentik groups.
-- User property mappings and group property mappings: see [Source property mappings](../../property-mappings/index.md) and the section below for details.
+- **Choose a Provider type**: select LDAP Provider as the provider type.
 
-## Password backend
+- **Configure the Provider**: provide a name (or accept the auto-provided name) and set the authorization flow to use for this provider.
 
-No extra configuration is required. Simply select the Kerberos backend in the password stage of your flow.
+- **Configure Bindings** _(optional)_: you can create a [binding](/docs/add-secure-apps/flows-stages/bindings/) (policy, group, or user) to manage the listing and access to applications on a user's **My applications** page.
 
-Note that this only works on users that have been linked to this source, i.e. they must have been created via sync or via SPNEGO.
+3. Click **Submit** to save the new application and provider.
 
-## Sync
+### Create a group in authentik
 
-The sync process uses the [Kerberos V5 administration system](https://web.mit.edu/kerberos/krb5-latest/doc/admin/database.html) to list users. Your KDC must support it to sync users with this source.
+Create a group that will grant access to Calibre-Web.
 
-You need to create both a principal (a unique identity that represents a user or service in a Kerberos network) for authentik and a keytab file:
+1. Navigate to **Directory** > **Groups** and click **Create**.
 
-```bash
-$ kadmin
-> add_principal authentik/admin@REALM.COMPANY
-> ktadd -k /tmp/authentik.keytab authentik/admin@REALM.COMPANY
-> exit
-$ cat /tmp/authentik.keytab | base64
-$ rm /tmp/authentik.keytab
-```
+- **Name**: provide a name (e.g. `Calibre-Web`).
 
-In authentik, configure these extra options:
+2. Click **Create**.
 
-- Sync users: enable it
-- Sync principal: `authentik/admin@REALM.COMPANY`
-- Sync keytab: the base64-encoded keytab created above.
+### Add users to the group
 
-If you do not wish to use a keytab, you can also configure authentik to authenticate using a password, or an existing credentials cache.
+Add the user that require access to the newly created group.
 
-## SPNEGO
+1. Navigate to **Directory** > **Groups** and click on the name of the group (e.g. `Calibre-Web`) that was just created.
 
-You need to create both a principal (a unique identity that represents a user or service in a Kerberos network) for authentik and a keytab file:
+2. Navigate to the **Users** tab and click **Add existing user**.
 
-```bash
-$ kadmin
-> add_principal HTTP/authentik.company@REALM.COMPANY
-> ktadd -k /tmp/authentik.keytab HTTP/authentik.company@REALM.COMPANY
-> exit
-$ cat /tmp/authentik.keytab | base64
-$ rm /tmp/authentik.keytab
-```
+3. Click **+**.
 
-In authentik, configure these extra options:
+4. Select the user that requires access and click **Add**.
 
-- SPNEGO keytab: the base64-encoded keytab created above.
+5. Click **Add**.
 
-If you do not wish to use a keytab, you can also configure authentik to use an existing credentials cache.
+## Calibre-Web configuration
 
-You can also override the SPNEGO server name if needed.
+1. Navigate to **Admin** > **Edit Basic Configuration** and click on **Feature Configuration** and set the following options:
 
-You might need to configure your web browser to allow SPNEGO. Check out [our documentation](./browser.md) on how to do so. You can now login to authentik using SPNEGO.
+- Login Type: `Use LDAP Authentication`
+- LDAP Server: `<em>authentik.company</em>`
+- LDAP Server Port: `389`
+- LDAP Encryption: `None`
+- LDAP Authentication: `Simple`
+- LDAP Administrator Username: `cn=<em><authentik_administrator_username></em>,ou=users,dc=goauthentik,dc=io` (e.g. `cn=akadmin,ou=users,dc=goauthentik,dc=io`)
+- LDAP Administrator Password: `<em><authentik_administrator_password></em>`
+- LDAP Distinguished Name (DN): `dc=ldap,dc=goauthentik,dc=io`
+- LDAP User Object Filter: `(&(objectclass=user)(cn=%s))`
+- LDAP Server is OpenLDAP?: `true`
+- LDAP Group Object Filter: `(&(objectclass=group)(cn=%s))`
+- LDAP Group Name: `<em><group_name></em>` (e.g. `Calibre-Web`)
+- LDAP Group Members Field: `member`
+- LDAP Member User Filter Detection: `Autodetect`
 
-### Custom server name
+2. Click **Save**.
 
-If your authentik instance is accessed from multiple domains, you might want to force the use of a specific server name. You can do so with the **Custom server name** option. The value must be in the form of `HTTP@authentik.company`.
+3. Navigate to **Admin** and click **Import LDAP Users**
 
-If not specified, the server name defaults to trying out all entries in the keytab/credentials cache until a valid server name is found.
+4. Once the user is imported from authentik, click **Edit Users** and give the user the desired permissions by checking the relevant checkboxes.
 
-## Extra settings
+## Configuration verification
 
-There are some extra settings you can configure:
-
-- Update internal password on login: when a user logs in to authentik using the Kerberos source as a password backend, their internal authentik password will be updated to match the one from Kerberos.
-- Use password writeback: when a user changes their password in authentik, their Kerberos password is automatically updated to match the one from authentik. This is only available if synchronization is configured.
-
-## Kerberos source property mappings
-
-See the [overview](../../property-mappings/index.md) for information on how property mappings work with external sources.
-
-By default, authentik ships with [pre-configured mappings](#built-in-property-mappings) for the most common Kerberos setups. These mappings can be found on the Kerberos Source Configuration page in the Admin interface.
-
-### Built-in property mappings
-
-Kerberos property mappings are used when you define a Kerberos source. These mappings define which Kerberos property maps to which authentik property. By default, the following mappings are created:
-
-- authentik default Kerberos User Mapping: Add realm as group
-  The realm of the user will be added as a group for that user.
-- authentik default Kerberos User Mapping: Ignore other realms
-  Realms other than the one configured on the source are ignored, and log in is not allowed.
-- authentik default Kerberos User Mapping: Ignore system principals
-  System principals such as `K/M` or `kadmin/admin` are ignored.
-- authentik default Kerberos User Mapping: Multipart principals as service accounts
-  Multipart principals (for example: `HTTP/authentik.company`) have their user type set to **service account**.
-
-These property mappings are configured with the most common Kerberos setups.
-
-### Expression data
-
-The following variable is available to Kerberos source property mappings:
-
-- `principal`: a Python string containing the Kerberos principal. For example `alice@REALM.COMPANY` or `HTTP/authentik.company@REALM.COMPANY`.
-
-When the property mapping is invoked from a SPNEGO context, the following variable is also available:
-
-- `spnego_info`: a Python dictionary with the following keys:
-    - `initiator_name`: the name of the initiator of the GSSAPI security context
-    - `target_name`: the name of the target of the GSSAPI security context
-    - `mech`: the GSSAPI mechanism used. Should always be Kerberos
-    - `actual_flags`: the flags set on the GSSAPI security context
-
-When the property mapping is invoked from a synchronization context, the following variable is also available:
-
-- `principal_obj`: a [`Principal`](https://kadmin-rs.readthedocs.io/latest/kadmin.html#kadmin.Principal) object retrieved from the KAdmin API
-
-## Troubleshooting
-
-You can start authentik with the `KRB5_TRACE=/dev/stderr` environment variable for Kerberos to print errors in the logs.
+To confirm that authentik is properly configured with _Calibre-Web_, log out and log back in using the credentials of a user that is a member of the LDAP group (e.g. `Calibre-Web`).
